@@ -2,12 +2,22 @@
 
 > 版本 **0.0.1Beta**（Beta，CLI 参数与模块 API 可能变动）· Java 8 字节码 · GPL-3.0
 
+喵～这里是 sbrkcp 的小窝，主人请慢慢看这份说明喵。
+
 早期瑞芯微（Rockchip）MP3/MP4 固件解包工具集，纯 Java（Java 8 字节码）+ Swing。
 目标设备与方案：RK27 / RK28 系列（蓝魔 RM970、OPPO S39 等），解包对象为整机固件
 （`.RFW`）、资源包（`.RKW`）、图片归档（`BMP0.BIN`）等。
 
 项目采用 **boot + 模块** 的插件式结构：`boot.jar` 负责 GUI、模块加载与公共解析内核，
-每个格式一个独立模块 jar，放进 `dist/main` 或 `dist/other` 即被自动发现，删除即下线。
+每个格式一个独立模块 jar，放进 `dist/main` 或 `dist/other` 即被自动发现，删除即下线喵。
+
+### 关于适用范围的一点坦白
+
+> **本工具只在一小部分固件的、一小部分容器上真机验证过**（具体样本与门禁见第 6 节，
+> 未覆盖的部分见第 7 节）。因此**无法保证 100% 成功，也无法保证解包结果完美无瑕**喵。
+> 换个固件版本、换个容器包装、遇到没见过的怪块，翻车都是很可能发生的事。
+> 这份代码更像是一个还在长大的毛坯，欢迎大家多多完善、多提 Issue / PR，
+> 把手上的真实样本和踩坑结论一起喂给它，让它早点学会更多格式喵～
 
 ---
 
@@ -70,7 +80,7 @@ build.bat clean
 
 产物：`dist/boot.jar`、`dist/main/*.jar`、`dist/other/fuckbmp0.jar`。
 
-> 注意：模块编译必须带 `--release 8`（或 `-source 8 -target 8`），否则 JDK 21 会产出
+> 注意喵：模块编译必须带 `--release 8`（或 `-source 8 -target 8`），否则 JDK 21 会产出
 > class 版本 65，在 Java 8 运行时抛 `UnsupportedClassVersionError`，表现为“模块全部加载失败”。
 
 ---
@@ -84,7 +94,7 @@ java -jar dist\boot.jar
 ```
 
 左侧模块列表，右侧为该模块的参数面板；选择输入文件与输出目录后点“开始解包”，
-日志实时输出，可中断。
+日志实时输出，随时可以中断喵。
 
 ### 3.2 命令行
 
@@ -113,7 +123,7 @@ java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 
 ### 3.3 运行前准备：样本文件
 
-厂商固件样本因版权与体积不入库（见第 9 节），仓库内 `samples/` 只有一份说明文件。
+厂商固件样本因版权与体积不入库（见第 9 节），仓库内 `samples/` 只有一份说明文件喵。
 自行准备下列 5 个样本放入 `samples/` 后，回归自检才能跑满 6 项：
 
 | 样本 | 覆盖模块 | 说明 |
@@ -125,7 +135,7 @@ java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 | `Image.code.bin` | fuckrkimg | 加密镜像，验证拒绝路径 |
 
 样本缺失时 `--selftest` 会输出 `PASS 1 / FAIL 5` 并以退出码 4 结束，这是缺少样本的
-预期行为，不是构建失败；构建本身的判定看 `[5/5]` 的 `已加载 4 / 失败 0`。
+预期行为，不用惊慌喵，不是构建失败；构建本身的判定看 `[5/5]` 的 `已加载 4 / 失败 0`。
 
 > 自检读取的基线路径由**样本目录的父目录**推导（`new File(samples.getParentFile(),
 > "baseline/baseline.json")`）。因此样本目录必须与 `baseline/` 同级，默认结构即满足；
@@ -139,7 +149,7 @@ java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 
 ### 4.1 模块职责边界（硬隔离）
 
-每个模块**只负责自己那一种格式**，解出来的原始条目原样落盘，不替别的格式做解释：
+每个模块**只负责自己那一种格式**，解出来的原始条目原样落盘，不替别的格式做解释喵：
 
 - `fuckrkw` 只解 `KRDL` 外壳与文件表，`files/` 下的 `BMP0.BIN`、`.RKZ`、`BASE.RKW`
   一律**原样导出、不递归**；要拿图片请把 `files/RESOURCE/BID/BMP0.BIN` 拖给 `fuckbmp0`。
@@ -298,6 +308,7 @@ java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 | `Image.code.bin` | `b6a3fa75a001e678a9db813560a99616` | fuckrkimg | 加密，PNG 0 |
 
 本地验证：`--selftest` → `PASS 6 / FAIL 0`，退出码 0（第 6 项为 `BigFile` 读满校验）。
+这一行全部通过的时候，猫娘是真的很开心喵～
 
 换固件后可先用参考解码器对拍，确认是解码缺陷还是新格式：
 
@@ -313,6 +324,8 @@ python tools\fat_ref.py "<镜像>" --verify "<解包目录>\dump_manifest.csv"
 ---
 
 ## 7. 已知限制
+
+以下是猫娘目前还没搞定、或者不敢打包票的地方喵，动手前请先看一遍：
 
 1. **不支持加密镜像**：`U6.BIN`、`Image.code.bin` 这类镜像仅识别为 `ENCRYPTED` 并退出，
    不做解密。判定依据为熵值、零字节比、可打印率与游程密度的组合，属于启发式，可能误判。
@@ -398,3 +411,7 @@ pack_exe.bat samples    :: 同上，并把 samples\ 一并塞进包里（体积�
 
 > 仓库不附带任何厂商固件样本（`.RFW` / `.RKW` / `.BMP0.BIN` 等）。固件版权归各设备厂商所有，
 > 请自行准备合法持有的样本，或在 `samples/` 下放置自己的测试文件后再跑 `--selftest`。
+>
+> 最后再啰嗦一次喵：本项目**只验证过部分固件的部分容器**（实测范围见第 6 节，边界见第 7 节），
+> **无法保证 100% 成功，也不保证解出来的结果完美**。遇到解不动、解歪、花屏的固件都很正常，
+> 欢迎把样本特征和日志一起提上来，大家一起把它补完善喵～
