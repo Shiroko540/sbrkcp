@@ -111,6 +111,28 @@ java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 `baseDir` 用于定位 `main/` 与 `other/`，默认为 `boot.jar` 所在目录，可用
 `-Dsbrkcp.base=<dir>` 覆盖。
 
+### 3.3 运行前准备：样本文件
+
+厂商固件样本因版权与体积不入库（见第 9 节），仓库内 `samples/` 只有一份说明文件。
+自行准备下列 5 个样本放入 `samples/` 后，回归自检才能跑满 6 项：
+
+| 样本 | 覆盖模块 | 说明 |
+|---|---|---|
+| `ROCK.RFW` | fuckrfw | 整机固件，裸图段启发式识别 |
+| `OPPOS9.RKW` | fuckrkw | 资源包，文件表 + 内嵌 RKRS |
+| `BMP0.BIN` | fuckbmp0 | RKRS 图片块，含 RLE 扩展 |
+| `U6.BIN` | fuckrkimg | 加密镜像，验证拒绝路径 |
+| `Image.code.bin` | fuckrkimg | 加密镜像，验证拒绝路径 |
+
+样本缺失时 `--selftest` 会输出 `PASS 1 / FAIL 5` 并以退出码 4 结束，这是缺少样本的
+预期行为，不是构建失败；构建本身的判定看 `[5/5]` 的 `已加载 4 / 失败 0`。
+
+> 自检读取的基线路径由**样本目录的父目录**推导（`new File(samples.getParentFile(),
+> "baseline/baseline.json")`）。因此样本目录必须与 `baseline/` 同级，默认结构即满足；
+> 若把样本放到别处并读取那里的基线，指纹门禁会换成另一套期望值。
+
+图形界面需要可用的桌面会话；纯 SSH / 无头环境请走命令行或用 `--smoke` 做启动自检。
+
 ---
 
 ## 4. 模块能力
