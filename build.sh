@@ -35,6 +35,9 @@ fi
 echo "[1/5] 清理旧的编译输出"
 rm -rf build/bootjar build/mods
 mkdir -p build/bootjar build/mods build/tmp
+# dist/ 被 .gitignore 忽略，全新 clone 里不存在。JDK 17 的 jar 不会自动创建
+# --file 的父目录，会在 Files.move 处抛 NoSuchFileException，故显式建好。
+mkdir -p dist dist/main dist/other
 
 echo "[2/5] 编译 api / core / boot"
 find src/api src/core src/boot -name '*.java' > build/tmp/sources_boot.txt

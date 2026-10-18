@@ -28,6 +28,12 @@ if exist "%ROOT%\build\mods"     rmdir /s /q "%ROOT%\build\mods"
 if exist "%ROOT%\build\tmp"      rmdir /s /q "%ROOT%\build\tmp"
 mkdir "%ROOT%\build\bootjar" 2>nul
 mkdir "%ROOT%\build\tmp" 2>nul
+rem dist/ is git-ignored, so it never exists on a fresh clone. JDK 17's jar
+rem does NOT create the parent directory of --file and fails with
+rem NoSuchFileException on Files.move; create them explicitly.
+if not exist "%ROOT%\dist"       mkdir "%ROOT%\dist"
+if not exist "%ROOT%\dist\main"  mkdir "%ROOT%\dist\main"
+if not exist "%ROOT%\dist\other" mkdir "%ROOT%\dist\other"
 
 echo [2/5] compile api / core / boot
 if exist "%ROOT%\build\tmp\sources_boot.txt" del /q "%ROOT%\build\tmp\sources_boot.txt"
