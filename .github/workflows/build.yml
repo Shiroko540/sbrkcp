@@ -1,0 +1,52 @@
+name: build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: 编译与打包（Linux / JDK 17）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: build.sh
+        run: |
+          chmod +x build.sh
+          ./build.sh
+      - name: 检查产物
+        run: |
+          test -f dist/boot.jar
+          test -f dist/main/fuckrkw.jar
+          test -f dist/main/fuckrfw.jar
+          test -f dist/main/fuckrkimg.jar
+          test -f dist/other/fuckbmp0.jar
+
+  windows:
+    name: 编译与打包（Windows / JDK 17）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: build.bat
+        shell: cmd
+        run: build.bat
+      - name: 检查产物
+        shell: pwsh
+        run: |
+          @('dist/boot.jar',
+            'dist/main/fuckrkw.jar',
+            'dist/main/fuckrfw.jar',
+            'dist/main/fuckrkimg.jar',
+            'dist/other/fuckbmp0.jar') | ForEach-Object {
+              if (-not (Test-Path $_)) { throw "缺少产物: $_" }
+            }

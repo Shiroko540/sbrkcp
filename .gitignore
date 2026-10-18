@@ -1,0 +1,45 @@
+# 构建输出
+build/
+out/
+dist/
+*.class
+*.jar
+
+# 厂商固件样本（版权归各设备厂商，不入库；见 README 第 9 节）
+samples/*
+!samples/README.md
+*.RFW
+*.rfw
+*.RKW
+*.rkw
+*.BIN
+*.bin
+
+# 解包产物
+**/unpack_report.txt
+**/part*_*.bin
+**/*_manifest.csv
+**/*_diag.txt
+
+# 编辑器与 IDE
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.iml
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志与崩溃转储
+*.log
+hs_err_pid*
+replay_pid*
+
+# Python 工具
+__pycache__/
+*.pyc
+
+# 自检自动生成的基线历史备份（只提交 baseline.json）
+baseline/baseline_*.json

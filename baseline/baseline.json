@@ -1,0 +1,52 @@
+{
+  "apiVersion": 1,
+  "generatedAt": "2026-10-18",
+  "note": "回归基线：由本实现在本机实测生成（JDK 8 / JDK 21 运行期指纹一致）。fingerprint 覆盖每个条目的 name|w|h|depth|compress 与解码后的像素内容，不采用 PNG 字节数（ImageIO 编码器随 JDK 版本不同，字节数会漂移）。2026-10-18 修复 BMP0.BIN 的 RLE 扩展计数后，BMP0.BIN 指纹由 791f7316… 变为 3228c404…（1270 张不变，像素被纠正）。裸图段(fuckrfw)识别为启发式：记录头无魔数，张数随判据细节可能漂移，更新基线前需人工确认产物可读。ROCK.RFW 自 2026-10-18 按《V3I_ROCK_RFW_样本解析说明_v1》校正：记录长恒为 0x200+w*h*2（去掉 512 字节对齐与 &~3 补位），步进 next=cur+0x200+w*h*2，段起点判据为 4 字节步进 + 连续 >=3 条合法记录，另加 w*h 像素上限 1700000 过滤退化伪头。旧基线 118 张是 512 对齐时代的漏采结果，更正后为 159 张、分区 [9,9,74,67]，与文档实测段清单（P0 3/P1 3/P2 17/P3 15 段）逐段吻合；文档自报的 156 张与其第 9 节门禁 0x00BC2A7C=1018x855 互相矛盾（该偏移落在 0x00B1740C 的 1119x1087 记录像素区内），本实现取段清单口径。P2/P3 在段内偏移 0x8232CC 之后分叉（同一资源池的两个版本，P3 更多），故 mirror 门禁改为 part2 与 part3 从头起最长一致前缀 >= 40 条（实测 43 条全等），不再要求张数相等或全序列一致率。",
+  "samples": {
+    "ROCK.RFW": {
+      "md5": "422f197b5e52085250ee7ad4e11abd56",
+      "module": "fuckrfw",
+      "png": 159,
+      "parts": [
+        9,
+        9,
+        74,
+        67
+      ],
+      "mirror": "2,3",
+      "mirrorRate": 40,
+      "fingerprint": "5c6811d8ea578a2544edfa60048e21e9"
+    },
+    "OPPOS9.RKW": {
+      "md5": "2b49dedd47aabc41d03ab1073122dde7",
+      "module": "fuckrkw",
+      "files": 29,
+      "png": 0,
+      "fingerprint": null,
+      "filesFingerprint": "978a2514cdd954d1b6c9a8de6b7492a6",
+      "then": {
+        "module": "fuckbmp0",
+        "in": "files/RESOURCE/BID/BMP0.BIN",
+        "png": 618
+      }
+    },
+    "BMP0.BIN": {
+      "md5": "e6ee01f2482fd19718b85be36ec7359b",
+      "module": "fuckbmp0",
+      "png": 1270,
+      "fingerprint": "3228c4045ba7947a5918fcc42d9c49b2"
+    },
+    "U6.BIN": {
+      "md5": "92dee7a1fbd7ac65e3b612b383044678",
+      "module": "fuckrkimg",
+      "encrypted": true,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "Image.code.bin": {
+      "md5": "b6a3fa75a001e678a9db813560a99616",
+      "module": "fuckrkimg",
+      "encrypted": true,
+      "fingerprint": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+# 统一换行符：源码一律 LF，Windows 批处理用 CRLF
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.sh  text eol=lf
+*.jar binary
+*.png binary
+*.bin binary
+*.zip binary
