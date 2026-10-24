@@ -16,7 +16,7 @@ import sbrkcp.core.Firmware;
 public final class ImgModule implements SbrkcpModule {
 
     private static final ModuleInfo INFO = new ModuleInfo(
-            "fuckrkimg", "磁盘镜像 / 加密判定", "0.0.1Beta", 1,
+            "fuckrkimg", "磁盘镜像 / 加密判定", "0.0.2", 1,
             "镜像", new String[]{"img"}, 30,
             "识别 FAT16/FAT32 并解出全部文件；无结构镜像输出熵、块重复率、可打印率，判定是否疑似加密。");
 

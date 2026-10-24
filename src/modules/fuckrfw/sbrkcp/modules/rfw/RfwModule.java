@@ -14,7 +14,7 @@ import sbrkcp.core.Engine;
 public final class RfwModule implements SbrkcpModule {
 
     private static final ModuleInfo INFO = new ModuleInfo(
-            "fuckrfw", "RFW 整机固件解包", "0.0.1Beta", 1,
+            "fuckrfw", "RFW 整机固件解包", "0.0.2", 1,
             "整机固件", new String[]{"rfw"}, 20,
             "解出 WFKR 各分区原始文件，并在分区内自动识别 RKRS 容器或 0x200 头裸图段导出 PNG。");
 

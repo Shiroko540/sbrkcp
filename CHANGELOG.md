@@ -4,6 +4,42 @@
 
 版本号规则：`0.0.x` 为 Beta 阶段（CLI 参数与模块 API 可能变动），首个对外版本为 `0.0.1Beta`。
 
+## [0.0.2] - 2026-10-24
+
+在 0.0.1Beta 基础上补充文本/字符串抽取与 ROCK 表分析能力，并调整界面文案。
+
+### 新增
+
+- **文本抽取**：`core/text` 新增 `StringsProbe` / `StringTable` / `StringsExport` / `StringsEntry`
+  / `BareScanner` / `ArchiveProbe` / `CryptoDiag`，支持裸扫描、归档探测与加密判定。
+- **ROCK 表分析**：`core/rock` 新增 `RockAnalyzer` / `RockTable` / `RockReport` / `RockStats`，
+  输出索引命中、字模命中、文本命中与像素命中统计。
+- **CLI 入口**：`RockCli`、`StringsCli`，可在命令行直接调用上述能力。
+- **GUI**：新增 `StringsModule` / `StringsPanel`（字符串抽取模块），并调整主界面文案。
+- **版本标识**：统一为 `0.0.2`，4 个模块的 `ModuleInfo.version` 同步。
+
+### 变更
+
+- `--headless` 新增 `strings` 与 `rock` 两个子命令；`strings` 支持
+  `--format`（csv/txt/json/md，可逗号多选）/ `--lang` / `--strategies` / `--min-len` /
+  `--bare-limit` / `--dedup` / `--no-dedup` / `--strip` / `--quiet`。
+- 「界面文案」为 boot 内置模块（`StringsModule`，id `strings`），与 `dist/main`、`dist/other`
+  的 jar 模块并列显示，但**不是独立 jar**，也**不会**出现在 `--list-modules` 输出里。
+
+### 已知问题
+
+- **RK26 系列等部分固件暂时不可用**：`ROCK.RFW`（`RK2602A_SDK_MLC_DRM_APE.rfw`）这类 RK26
+  固件，`ROCK` 头压在外层 `WFKR` 头之后的 `0x200`，而签名判定只认文件首 4 字节，
+  `--headless rock` 直接以 exit 1 结束、`notes` 为空。把该文件从 `0x200` 切出后再喂，
+  同一份代码可解出 67 条目录 / 2 个字库 / 1 个索引表 / 26815 条明文，说明卡在**入口不支持
+  嵌套偏移的头**，而非解析内核；补上「自动定位 `ROCK` 头偏移」前，RK26 整包一律不可用。
+  （详见 README §7 第 1 条、§5.7）
+- `rock` 只有命令行入口，**无 GUI**；`usage()` 中也未列出 `--headless rock`（本项目无 `--help`）。
+- 字符串抽取对加密镜像只能给出「疑似 / 非加密」判定，**抽不出可用文案**；S4/S5/S7 各有
+  5000 条硬上限，达上限即截断；S9 的加密口径与 `fuckrkimg` 的 `ENCRYPTED` 判定不是同一套阈值
+  （`U6.BIN` 两边结论相反），加密与否以 `fuckrkimg` 为准。
+- `--selftest` 仍为 6 项（未覆盖 `strings` / `rock`），这两项回归需手工执行。
+
 ## [0.0.1Beta] - 2026-10-18
 
 首个对外发布的 Beta 版，整合内部迭代（0.1.0 → 0.1.1）的全部成果。

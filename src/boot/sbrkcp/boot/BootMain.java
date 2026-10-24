@@ -26,6 +26,18 @@ public final class BootMain {
         boolean selftest = false;
         boolean smoke = false;
         boolean showVersion = false;
+        boolean stringsMode = false;
+        boolean rockMode = false;
+        boolean dedup = false;
+        boolean strip = false;
+        boolean quiet = false;
+        int minLen = 0;
+        int bareLimit = 0;
+        String stringsIn = null;
+        String rockIn = null;
+        String format = "csv";
+        String lang = "both";
+        String strategies = "";
         String samples = null;
         String guiFile = null;
         String err = null;
@@ -70,8 +82,58 @@ public final class BootMain {
                     if (i + 1 < args.length) samples = args[++i];
                     else err = "--samples 缺少参数";
                     break;
+                case "--format":
+                    if (i + 1 < args.length) format = args[++i];
+                    else err = "--format 缺少参数";
+                    break;
+                case "--lang":
+                    if (i + 1 < args.length) lang = args[++i];
+                    else err = "--lang 缺少参数";
+                    break;
+                case "--strategies":
+                    if (i + 1 < args.length) strategies = args[++i];
+                    else err = "--strategies 缺少参数";
+                    break;
+                case "--min-len":
+                    if (i + 1 < args.length) {
+                        try {
+                            minLen = Integer.parseInt(args[++i].trim());
+                        } catch (NumberFormatException nfe) {
+                            err = "--min-len 需要整数";
+                        }
+                    } else {
+                        err = "--min-len 缺少参数";
+                    }
+                    break;
+                case "--bare-limit":
+                    if (i + 1 < args.length) {
+                        try {
+                            bareLimit = Integer.parseInt(args[++i].trim());
+                        } catch (NumberFormatException nfe) {
+                            err = "--bare-limit 需要整数";
+                        }
+                    } else {
+                        err = "--bare-limit 缺少参数";
+                    }
+                    break;
+                case "--dedup":
+                    dedup = true;
+                    break;
+                case "--no-dedup":
+                    dedup = false;
+                    break;
+                case "--strip":
+                    strip = true;
+                    break;
+                case "--quiet":
+                    quiet = true;
+                    break;
                 default:
                     if (a.startsWith("--")) err = "未知参数：" + a;
+                    else if ("strings".equalsIgnoreCase(a)) stringsMode = true;
+                else if ("rock".equalsIgnoreCase(a)) rockMode = true;
+                else if (rockMode && rockIn == null) rockIn = a;
+                    else if (stringsMode) stringsIn = a;
                     else guiFile = a;
             }
             if (err != null) break;
@@ -93,6 +155,48 @@ public final class BootMain {
                     + "  api=" + ModuleLoader.API_VERSION
                     + "  java=" + System.getProperty("java.version"));
             System.exit(0);
+        }
+
+        if (rockMode) {
+            RockCli.Options ro = new RockCli.Options();
+            ro.input = rockIn == null ? null : new File(rockIn);
+            ro.out = output == null ? null : new File(output);
+            ro.quiet = quiet;
+            int rcode = RockCli.run(ro);
+            if (!headless) { }
+            System.exit(rcode);
+        }
+        if (stringsMode) {
+            List<ModuleLoader.Entry> all = ModuleLoader.load(baseDir);
+            StringsCli.Options so = new StringsCli.Options();
+            so.input = stringsIn == null ? null : new File(stringsIn);
+            so.outDir = output == null ? null : new File(output);
+            so.module = moduleId == null ? "" : moduleId;
+            for (ModuleLoader.Entry e : all) {
+                if (e.module != null && e.id != null && e.id.equalsIgnoreCase(so.module)) {
+                    so.moduleImpl = e.module;
+                    break;
+                }
+            }
+            if (!so.module.isEmpty() && so.moduleImpl == null) {
+                System.err.println("模块不存在或不兼容：" + so.module);
+                System.exit(3);
+            }
+            so.formats = format;
+            so.lang = lang;
+            so.dedup = dedup;
+            so.strip = strip;
+            so.strategies = strategies;
+            so.minLen = minLen;
+            so.bareLimit = bareLimit;
+            so.quiet = quiet;
+            int code = StringsCli.run(so, new StringsCli.Log() {
+                @Override
+                public void line(String s) {
+                    System.out.println(s);
+                }
+            });
+            System.exit(code);
         }
 
         List<ModuleLoader.Entry> entries = ModuleLoader.load(baseDir);
@@ -181,8 +285,12 @@ public final class BootMain {
         System.out.println("  java -jar boot.jar --list-modules          列出模块与加载状态");
         System.out.println("  java -jar boot.jar --headless --module <id> --in <固件> --out <目录> [--list] [--flip]");
         System.out.println("  java -jar boot.jar --selftest [--samples <样本目录>]");
+        System.out.println("  java -jar boot.jar --headless strings <文件或目录|固件> --out <目录> [--format csv,txt,json,md]");
+        System.out.println("        [--lang cn|en|both] [--dedup|--no-dedup] [--strip] [--strategies S1,S4] [--min-len N] [--bare-limit N] [--quiet]");
+        System.out.println("  java -jar boot.jar --headless --module fuckrkw strings <a.rkw> --out <目录>");
+        System.out.println("  java -jar boot.jar --headless --module fuckrkimg strings <a.img> --out <目录>");
         System.out.println("  java -jar boot.jar --smoke                 图形界面冒烟（自动关闭）");
-        System.out.println("退出码：0 成功 / 2 参数错误 / 3 模块不存在或不兼容 / 4 解包失败");
+        System.out.println("退出码：0 成功 / 2 参数错误 / 3 模块不存在或不兼容 / 4 解包或导出失败 / 5 未提取到文案");
     }
 
     /** JVM / AWT 自带的非守护线程不算应用泄漏，只盯我们自己起的线程。 */

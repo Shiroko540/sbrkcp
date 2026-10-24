@@ -19,7 +19,7 @@ set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 set "JDK_DEFAULT=C:\Program Files\Microsoft\jdk-21.0.12.101-hotspot"
 set "NAME=sbrkcp"
-set "APPVER=0.0.1"
+set "APPVER=0.0.2"
 set "E=%ROOT%\build\exe"
 set "OUT=%ROOT%\dist\exe"
 

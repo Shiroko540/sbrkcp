@@ -14,7 +14,7 @@ import sbrkcp.core.Engine;
 public final class RkwModule implements SbrkcpModule {
 
     private static final ModuleInfo INFO = new ModuleInfo(
-            "fuckrkw", "RKW 资源包解包", "0.0.1Beta", 1,
+            "fuckrkw", "RKW 资源包解包", "0.0.2", 1,
             "资源包", new String[]{"rkw"}, 10,
             "解析 RKDL 文件表，按原路径导出全部内嵌文件。只解 RKW 外壳，"
                     + "内嵌的 BMP0.BIN 等原样落盘不解析，需要图片请交给 fuckbmp0 单独解。");

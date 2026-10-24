@@ -1,6 +1,6 @@
 # sbrkcp
 
-> 版本 **0.0.1Beta**（Beta，CLI 参数与模块 API 可能变动）· Java 8 字节码 · GPL-3.0
+> 版本 **0.0.2**（Beta，CLI 参数与模块 API 可能变动）· Java 8 字节码 · GPL-3.0
 
 喵～这里是 sbrkcp 的小窝，主人请慢慢看这份说明喵。
 
@@ -11,11 +11,25 @@
 项目采用 **boot + 模块** 的插件式结构：`boot.jar` 负责 GUI、模块加载与公共解析内核，
 每个格式一个独立模块 jar，放进 `dist/main` 或 `dist/other` 即被自动发现，删除即下线喵。
 
+0.0.2 起除了解包，还多了两件「先看清再动手」的事：
+
+- **字符串抽取**（`--headless strings` / GUI 内置「界面文案」）：按 10 条策略从固件或目录里
+  捞结构化文案与裸扫候选，可导出 CSV / TXT / JSON / Markdown；
+- **ROCK 表分析**（`--headless rock`）：解析 `ROCK` 头 + 16 字节目录表容器，产出条目表、
+  分区地图、块分类、文本与字库/像素 PNG（CLI 专属，暂无 GUI 入口）。
+
 ### 关于适用范围的一点坦白
 
 > **本工具只在一小部分固件的、一小部分容器上真机验证过**（具体样本与门禁见第 6 节，
 > 未覆盖的部分见第 7 节）。因此**无法保证 100% 成功，也无法保证解包结果完美无瑕**喵。
 > 换个固件版本、换个容器包装、遇到没见过的怪块，翻车都是很可能发生的事。
+>
+> **特别声明：RK26 系列等部分固件目前暂时不可用。** 手上 `ROCK.RFW`
+> （`RK2602A_SDK_MLC_DRM_APE.rfw`）这类 RK26 固件，它的 `ROCK` 头不在文件 0 偏移，
+> 而是压在外层 RFW 头之后的 `0x200` 处；当前 `ROCK` 签名判定只认文件首 4 字节，
+> 所以直接喂进去一律「未命中 ROCK 目录表」，`rock` 子命令对它是 exit 1。
+> 这不是「数据坏了」，而是**入口还没支持嵌套偏移的头**，详见第 7 节第 1 条。
+>
 > 这份代码更像是一个还在长大的毛坯，欢迎大家多多完善、多提 Issue / PR，
 > 把手上的真实样本和踩坑结论一起喂给它，让它早点学会更多格式喵～
 
@@ -36,8 +50,14 @@ sbrkcp/
 │   ├── api/     sbrkcp.api     模块契约：SbrkcpModule / ModuleInfo / UnpackOptions /
 │   │                            UnpackResult / ProgressListener / AbstractModulePanel
 │   ├── core/    sbrkcp.core    解析内核：BigFile / Firmware / Rkrs / RawImage / Fat / Engine
+│   │   ├── rock/               ROCK 头 + 16 字节目录表分析（0.0.2）
+│   │   │                        RockTable / RockAnalyzer / RockReport / RockStats
+│   │   └── text/               字符串抽取内核（0.0.2）
+│   │                            StringsProbe / StringTable / StringsExport / StringsEntry /
+│   │                            BareScanner / ArchiveProbe / CryptoDiag
 │   ├── boot/    sbrkcp.boot    BootMain / Version / ModuleLoader / MainFrame / LogBus /
 │   │                            SelfTest / MiniJson
+│   │                            RockCli / StringsCli / StringsModule / StringsPanel（0.0.2）
 │   └── modules/
 │       ├── fuckrkw/             .RKW 资源包解包
 │       ├── fuckrfw/             .RFW 整机固件解包
@@ -96,6 +116,17 @@ java -jar dist\boot.jar
 左侧模块列表，右侧为该模块的参数面板；选择输入文件与输出目录后点“开始解包”，
 日志实时输出，随时可以中断喵。
 
+模块列表里除了 `dist/main`、`dist/other` 的 jar 模块，0.0.2 起还**内置**了一个
+「界面文案」入口（id `strings`，归在“其他功能”下）：
+
+- 它**不是**独立模块 jar，由 `boot.jar` 里的 `StringsModule` 直接注册，与 jar 模块并列显示；
+- 因此它**不会**出现在 `--list-modules` 里（那边只列 `main/`、`other/` 下真实加载到的 jar），
+  也不受模块加载失败影响；
+- 面板提供「结构化 / 裸扫 / 全部合并」三个视图与「合并去重」按钮，输入可以是单个固件，
+  也可以是一个目录。
+
+> 注意：`GUI` 里目前**没有** ROCK 表分析的入口，`rock` 只有命令行一条路（见 §3.2、§7）。
+
 ### 3.2 命令行
 
 ```bat
@@ -117,6 +148,60 @@ java -jar dist\boot.jar --headless --module fuckbmp0 --in samples\BMP0.BIN --out
 :: 回归自检（退出码 0 通过 / 4 失败）
 java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 ```
+
+#### 字符串抽取（0.0.2）
+
+```bat
+:: 从资源包/固件里抠界面文案（S1–S10 全跑，默认输出 CSV）
+java -jar dist\boot.jar --headless strings samples\OPPOS9.RKW --out out\s_rkw
+
+:: 多格式同时导出 + 中英对照 + 去重 + 去尾空白
+java -jar dist\boot.jar --headless strings samples\OPPOS9.RKW --out out\s_rkw ^
+     --format csv,txt,json,md --lang both --dedup --strip
+
+:: 只跑指定策略、提高最短长度、限制裸扫条数、静默
+java -jar dist\boot.jar --headless strings D:\dump\files --out out\s_dir ^
+     --strategies S1,S4 --min-len 6 --bare-limit 3000 --quiet
+
+:: 明确指定用哪个模块解外层容器（不指定则按 Engine.auto 自动识别）
+java -jar dist\boot.jar --headless --module fuckrkw strings samples\OPPOS9.RKW --out out\s_rkw
+java -jar dist\boot.jar --headless --module fuckrkimg strings samples\U6.BIN --out out\s_u6
+```
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--format` | `csv` | 可逗号分隔多选：`csv,txt,json,md`；CSV 为 UTF-8 **带 BOM**（Excel 直接双击不乱码） |
+| `--lang` | `both` | `cn` / `en` / `both`，控制中英对照列的保留方式 |
+| `--dedup` / `--no-dedup` | `--no-dedup` | 归一化去重（同一条文案只留一条）；默认关，怕误合并不同界面的同名字符串 |
+| `--strip` | 关 | 去掉首尾空白与控制字符 |
+| `--strategies` | 全跑 S1–S10 | 只跑指定策略，逗号分隔，如 `S1,S4,S9` |
+| `--min-len` | `0`（用内核默认） | 最短长度；中文取该值，英文自动取 `max(N,4)` |
+| `--bare-limit` | `0`（用内核默认） | 裸扫候选条数上限 |
+| `--quiet` | 关 | 只留错误与最终路径，不打策略详情 |
+
+产出：`<stem>_界面文案_中英对照.<fmt>`、`<stem>_裸扫候选.<fmt>`、`probe_report.txt`
+（逐策略状态、命中数、耗时、告警，以及 `_probe_unpack/` 下解包递归的明细）。
+退出码：`0` 成功、`5` 未提取到任何文案（其余同全局退出码表）。
+
+#### ROCK 表分析（0.0.2）
+
+```bat
+:: 单个文件
+java -jar dist\boot.jar --headless rock D:\inner\SOMETHING.BIN --out out\rock
+
+:: 目录（每个文件一个子目录）
+java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
+```
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `--out` | 输入同级 `rock_out/` | 输出目录；目录输入时每个文件建一个子目录 |
+| `--quiet` | 关 | 不打印每个文件的命中摘要 |
+
+产出 7 个文件：`rock_table.csv`（逐条：偏移/大小/结束/flag/熵/零占比/可打印率/512 重复/分类/判据）、
+`rock_partition.md`（分区地图）、`rock_blocks.csv`（块分类）、`rock_texts.csv`（可打印块）、
+`rock_font_<i>_<w>x<h>.png`、`rock_pixel_<i>_<w>x<h>.png`、`rock_report.txt`（凭证与告警）。
+未命中时**不创建任何产物**，只打印 `未命中 ROCK 目录表：<notes>` 并以 exit 1 结束。
 
 `baseDir` 用于定位 `main/` 与 `other/`，默认为 `boot.jar` 所在目录，可用
 `-Dsbrkcp.base=<dir>` 覆盖。
@@ -286,6 +371,73 @@ java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 实读字节 / MD5）**零差异**，抽样文件与同镜像手工导出树逐字节一致；
 合成镜像（LFN 中文长名、跨簇目录、`size == 0`、`A→B→A` 目录环）亦零差异。
 
+### 5.6 字符串抽取（0.0.2）
+
+结果分两轨，互不混算：
+
+- **结构化**：来自真正的字符串表（有表头、有索引、可还原条目边界），可信度高；
+- **裸扫**：对整个字节流按编码启发式扫描出的可打印串，**天然含噪声**，条数多不等于有用。
+
+十条策略（`--strategies` 的取值就是这几个编号）：
+
+| 策略 | 做什么 | 实测（`OPPOS9.RKW`，23 MB） | 实测（`U6.BIN`，8 MB） |
+|---|---|---|---|
+| S1 | RKRS 字符串表解析 | hit 702 条，基址 `0x1315014`，score 2369.25 | miss（无自洽 RKRS 字段表） |
+| S2 | 基址 / 偏移对齐枚举 | 候选 41 个，有效 1 个 | 候选 1 个，有效 0 |
+| S3 | 解包 / 目录递归 | skip（单文件输入） | skip |
+| S4 | UTF-16LE 裸扫 | hit 5000（达上限截断） | hit 5000（截断） |
+| S5 | GBK 裸扫 | hit 5000（截断） | hit 5000（截断） |
+| S6 | UTF-8 裸扫 | hit 6 | hit 13 |
+| S7 | ASCII 裸扫 | hit 5000（截断） | hit 5000（截断） |
+| S8 | 压缩容器解压 | miss（无可解压点，LZMA 无 JDK 实现） | miss |
+| S9 | 加密 / 压缩诊断 | 熵 6.56 bit/B，判「非加密特征」 | 熵 6.80 bit/B，判「非加密特征」 |
+| S10 | 归一化去重 | 15440 → 15440（默认不去重） | 14650 → 14650 |
+
+合计：`OPPOS9.RKW` 结构化 702 + 裸扫 14738 = 15440 条；`U6.BIN` 结构化 0 + 裸扫 14650 条。
+
+要点与坑：
+
+- **S1 未命中时会自动解外层容器再递归**（`<out>\_probe_unpack\`，输入 <256 MB 才做）。
+  这条路径与 §4.1 的「模块不递归」不冲突：递归只发生在 `strings` 这个独立工具内部，
+  模块解包本身仍然不递归。指定 `--module fuckrkw` 则用它解，不指定就 `Engine.auto` 猜。
+- **S4/S5/S7 各自有 5000 条硬上限**，达到即截断，报告里会逐条写
+  「达到条数上限（5000），后续被截断」。看到 5000 就该知道**不是全部**，用 `--bare-limit`
+  或 `--min-len` 收窄再来一遍。
+- **S9 只做诊断，不产文案**，而且它的判定口径与 `fuckrkimg` 的加密判定**不是同一套阈值**：
+  `U6.BIN` 在 `--selftest` 里是 `ENCRYPTED`，但 S9 会给「非加密特征」（熵 6.80）。
+  两个结论不要互相引用，加密与否以 `fuckrkimg` 的解包判定为准。
+- **裸扫条数与质量无关**：U6 这种打不开的镜像照样能扫出 14650 条「候选」，绝大多数是
+  加密数据里凑巧连续的可见字节。不要拿条数当成果。
+- 导出：CSV / TXT / JSON / MD 一律 UTF-8，CSV 额外写 BOM；`probe_report.txt` 记录每个策略的
+  `status / hits / 耗时 / 说明` 与全部告警，排查先看它。
+
+### 5.7 ROCK 表分析（0.0.2）
+
+容器形态：`ROCK` 四字节签名 + 版本串（如 `ROCK26XX2005VER1.00`）→ 头部区（≤`0x400`）
+→ 16 字节目录表 → 数据区。单条记录 `type(u32) + offset(u32) + size(u32) + flag(u32)`。
+
+- **判据是自洽，不是偏移常量**：代码在 `0x20..0x1000` 之间按 16 步进枚举表起点，要求
+  `type ∈ {0,1}`、`type=0` 时 `offset=size=0`、`type=1` 时 `offset>=表尾` 且
+  `offset+size<=文件长`、`offset` 非递减，最后**表尾必须恰好等于首条数据 offset**
+  （允许 0 或 16 字节余量）。全仓没有任何硬编码的 `0x280` 之类魔数偏移。
+- 找不到严格自洽时，会退而接受「最长宽松候选」（≥`MIN_ENTRIES*2`），并在
+  `rock_report.txt` 的告警里写明；表尾不吻合时记「疑有额外头字段」。
+- 每条记录会给 `entropy` / `zero_ratio` / `printable` / `repeat512` 四个特征再分类，
+  字库（等宽位图）与像素块会按推断的宽高导出 PNG。
+
+实测口径（这两个数就是当前**命中率**的全部证据）：
+
+| 输入 | 结果 |
+|---|---|
+| `OPPOS9.RKW`（RK28，`KRDL` 外壳） | **未命中**，exit 1，`notes` 为空列表 |
+| `ROCK.RFW`（RK26，`WFKR` 外壳） | **未命中**，exit 1，`notes` 为空列表 |
+| `ROCK.RFW` 手工切掉外层 `0x200` 头后的 `ROCK.RFW[0x200:]` | 命中：表起点 `0x20`、条目 67、字库 2（16×16、16×24）、像素 0、索引 1、明文 26815、用时 3457 ms |
+
+所以结论很直白：**当前 `rock` 只认「文件偏移 0 就是 `ROCK`」的裸容器**。带外层壳
+（`.RFW` / `.RKW`）的固件，必须先自己解出内层文件再喂进来；RK26 就是卡在这一步（§7 第 1 条）。
+另外 `notes` 在「签名不在 0 偏移」这一种失败下是空的——只告诉你未命中，不告诉你为什么，
+这也是后面要补的地方。
+
 ---
 
 ## 6. 回归基线
@@ -327,25 +479,34 @@ python tools\fat_ref.py "<镜像>" --verify "<解包目录>\dump_manifest.csv"
 
 以下是猫娘目前还没搞定、或者不敢打包票的地方喵，动手前请先看一遍：
 
-1. **不支持加密镜像**：`U6.BIN`、`Image.code.bin` 这类镜像仅识别为 `ENCRYPTED` 并退出，
+1. **RK26 系列等部分固件暂时不可用**：`ROCK.RFW`（`RK2602A_SDK_MLC_DRM_APE.rfw`）这类
+   RK26 固件，`ROCK` 头实际压在外层 `WFKR` 头之后的 `0x200` 处，而签名判定只认文件首 4 字节，
+   于是直接判「未命中 ROCK 目录表」，`--headless rock` 以 exit 1 结束，`notes` 还是空的
+   （只告诉你未命中，不告诉你为什么）。**这不是格式不认识**：把 `ROCK.RFW` 从 `0x200` 切出来
+   （`ROCK.RFW[0x200:]`）再喂进去，同一份代码能解出 67 条目录、2 个字库（16×16 / 16×24）、
+   1 个索引表、26815 条明文，用时 3.5 s（见 §5.7）。所以卡的是**入口不支持嵌套偏移的头**，
+   不是解析内核。在补上「自动找 `ROCK` 头偏移」之前，RK26 系列请先手工切头、或先解掉外层壳
+   再喂；直接丢整包进去一律不可用。`OPPOS9.RKW`（RK28）同理，它根本没有顶层 `ROCK` 表。
+2. **不支持加密镜像**：`U6.BIN`、`Image.code.bin` 这类镜像仅识别为 `ENCRYPTED` 并退出，
    不做解密。判定依据为熵值、零字节比、可打印率与游程密度的组合，属于启发式，可能误判。
-2. **裸图段识别是启发式**：`0x200` 记录头没有魔数，判据由阈值决定，张数会随实现细节漂移
+3. **裸图段识别是启发式**：`0x200` 记录头没有魔数，判据由阈值决定，张数会随实现细节漂移
    （曾出现 118~183 张的不同结果）。当前判据见 §5.4，并辅以 part2/part3 镜像一致率门禁；
    修改判据后必须人工检查产物可读性，再更新基线。
    报告里的“可信段 / 疑似伪段”只是基于 `f3` 字段的诊断口径，**不是判据**：
    `part2`/`part3` 的 31 张可信图已人工确认是真实 UI，`part0`/`part1` 的 12 张全部落在伪段，
    该结论可直接用来判断后续改动是否把真图挤出可信集。
-3. **裸图段像素格式未完全确定**：实测同一固件内不同分辨率对 565 / 555 / BGR 的平滑度表现不一，
+4. **裸图段像素格式未完全确定**：实测同一固件内不同分辨率对 565 / 555 / BGR 的平滑度表现不一，
    当前统一按 565 + BGR + 0x200 偏移导出，个别图块可能出现色偏。
-4. **FAT L1 已实测，L2 未做**：`core/Fat.java` 的 FAT12/16/32 读取路径已在真机 FAT16 镜像
+5. **FAT L1 已实测，L2 未做**：`core/Fat.java` 的 FAT12/16/32 读取路径已在真机 FAT16 镜像
    （§5.5 门禁）与合成镜像上通过，并与 `tools\fat_ref.py` 全量清单对拍零差异；但**不做分区表
    探测**（镜像须是分区起始处的裸 FAT 卷）、不恢复已删除项、不处理跨盘 .img 内的多分区，
    这些属 L2，未实现。
-5. **BMP0 语义为实测推断**：`count` 的无符号游程、`0xFF` + 小端 u32 扩展计数、`0x00` 终结符、
+6. **BMP0 语义为实测推断**：`count` 的无符号游程、`0xFF` + 小端 u32 扩展计数、`0x00` 终结符、
    8/14 字节双头自适应与洋红色键规则均来自实测（样本 A 1270 条 + 样本 B 2624 条全量与独立
    参考解码器像素 MD5 一致），尚缺第三方资料佐证；换固件后若出现整批花屏，先查 §5.2 的块头判据。
-6. **仅覆盖 RK27 / RK28 早期方案**，不保证兼容后续 RK29+ 的资源格式。
-7. **`BMP0.BIN` 花屏缺陷已修复（2026-10-18）**：原实现把 RLE 的 `0xFF` 扩展计数当单字节游程、
+7. **覆盖范围有限**：RK26 部分容器（切头后可解，见第 1 条）+ RK27 / RK28 早期方案做过实测，
+   不保证兼容后续 RK29+ 的资源格式；RK26 的整包入口尚未打通。
+8. **`BMP0.BIN` 花屏缺陷已修复（2026-10-18）**：原实现把 RLE 的 `0xFF` 扩展计数当单字节游程、
    把未压缩块的第 4 字节填充位当 alpha、把块头写死 8 字节、色键按跨像素字节模式匹配，
    导致含扩展游程的图块整幅错位、未压缩图块全透明、14 字节头样本整体错位、部分图块通道被清零。
    现按 §5.2 的实测语义解码，两批真机样本全量对拍均通过：
@@ -355,8 +516,24 @@ python tools\fat_ref.py "<镜像>" --verify "<解包目录>\dump_manifest.csv"
      导出 2624 张 PNG。
 
    二阶段（`files/RESOURCE/BID/BMP0.BIN`）张数 618 仍只作参照告警——该内嵌样本尚未做逐条对拍。
-
----
+9. **字符串抽取的边界**（0.0.2 新增，先说清再看数）：
+   - S10 去重**默认关闭**，同一句文案在不同界面出现会重复列出；加了 `--dedup` 才合并。
+   - S4/S5/S7 各自 5000 条硬上限，达到即截断，报告里有告警——**条数不是成果**。
+   - S9 的「非加密特征」与 `fuckrkimg` 的 `ENCRYPTED` **不是同一套阈值**：`U6.BIN` 两边结论相反
+     （S9 熵 6.80 判非加密，`fuckrkimg` 判加密）。加密与否以 `fuckrkimg` 为准，S9 只作参考。
+   - 对加密镜像，工具只能给「疑似 / 非加密」的判定，**抽不出可用文案**，扫出来的候选基本是噪声。
+   - S8 只认得 JDK 自带的解压能力，**LZMA 没有 JDK 实现**，所以 `S8=miss` 属预期，不是漏扫。
+   - 结构化结果依赖 S1/S2 认表；表头字段被改过或加了壳的固件会退化到纯裸扫，准确率随之下降。
+10. **ROCK 表分析只有 CLI，且只认裸容器**（0.0.2 新增）：
+   - **没有 GUI 入口**，只能 `--headless rock`；`--list-modules` 里也找不到它（它不是模块）。
+   - 签名必须落在**文件偏移 0**，带 `.RFW` / `.RKW` 外壳的固件一律未命中（§5.7 两个样本都是）。
+   - 失败时 `notes` 可能是空列表，只打印 `未命中 ROCK 目录表：[]`，**没有原因说明**；
+     排查时得自己看文件头前 8 字节是不是 `ROCK`。
+   - 「命中率」目前只有 §5.7 那三行实测（两负一正），**没有跨固件统计**；别把切头后那 67 条 /
+     26815 条明文当成质量背书——明文是按字节特征扫出来的，未逐条校验。
+   - 单文件读取上限 512 MB（`RockCli.MAX_BYTES`），超了直接拒绝，不做流式处理。
+11. **`--help` 不存在**：参数写错时才会顺带打印 `usage()`；而 `usage()` 里目前只列了 `strings`，
+   **没列 `rock`**（`rock` 是能用的，只是没进帮助文本）。要看 `rock` 用法就照 §3.2 那份来。
 
 ## 8. Windows 自包含 EXE 打包
 
@@ -376,7 +553,7 @@ pack_exe.bat samples    :: 同上，并把 samples\ 一并塞进包里（体积�
 | 3 | 从 `build\bootjar` 重建 `boot.jar`，准备 `main\` / `other\` 布局 | `build\exe\pkg` |
 | 4 | `jpackage --type app-image` | `build\exe\out\sbrkcp\` |
 | 5 | 复制包内说明、可选样本 | `README_EXE.txt`、`samples\` |
-| 6 | 压缩 | `dist\exe\sbrkcp-0.0.1Beta-win-x64.zip` |
+| 6 | 压缩 | `dist\exe\sbrkcp-0.0.2Beta-win-x64.zip` |
 
 打包要点：
 

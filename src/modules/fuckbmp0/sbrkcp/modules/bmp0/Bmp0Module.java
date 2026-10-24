@@ -14,7 +14,7 @@ import sbrkcp.core.Engine;
 public final class Bmp0Module implements SbrkcpModule {
 
     private static final ModuleInfo INFO = new ModuleInfo(
-            "fuckbmp0", "BMP0 / RKRS 图片解包", "0.0.1Beta", 1,
+            "fuckbmp0", "BMP0 / RKRS 图片解包", "0.0.2", 1,
             "图片资源", new String[]{"bin", "rkz", "rkrs", "bmp0"}, 40,
             "解析 0x28+RKRS 头与 8 字节索引项，导出全部图片为 PNG；品红键控为透明，RLE 支持 0xFF 扩展游程。");
 
