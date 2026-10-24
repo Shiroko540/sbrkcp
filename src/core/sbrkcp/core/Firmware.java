@@ -127,7 +127,11 @@ public final class Firmware {
         for (int i = 16; i < len - 20; i++) {
             int c = buf[i] & 0xFF;
             if (c < 0x21 || c > 0x7E) continue;
-            if (buf[i - 1] != 0) continue;
+            // 表项 16 字节头必定 4 字节对齐。旧判据「名字前一字节为 0x00」实际读的是
+            // size 字段的最高字节，一旦文件 >= 16 MiB（0x01000000）该字节即为非零，
+            // 整条表项被静默丢弃（实测 S19 的 RESOURCE\BID\BMP0.BIN 17 MB 整条消失），
+            // 故改用头部对齐判定，其余四条约束不变。
+            if ((i - 16) % 4 != 0) continue;
 
             int end = i;
             while (end < len && (buf[end] & 0xFF) >= 0x21 && (buf[end] & 0xFF) <= 0x7E) end++;
