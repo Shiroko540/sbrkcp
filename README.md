@@ -24,10 +24,9 @@
 > 未覆盖的部分见第 7 节）。因此**无法保证 100% 成功，也无法保证解包结果完美无瑕**喵。
 > 换个固件版本、换个容器包装、遇到没见过的怪块，翻车都是很可能发生的事。
 >
-> **特别声明：RK26 系列等部分固件目前暂时不可用。** 手上 `ROCK.RFW`
-> （`RK2602A_SDK_MLC_DRM_APE.rfw`）这类 RK26 固件，它的 `ROCK` 头不在文件 0 偏移，
-> 而是压在外层 RFW 头之后的 `0x200` 处；当前 `ROCK` 签名判定只认文件首 4 字节，
-> 所以直接喂进去一律「未命中 ROCK 目录表」，`rock` 子命令对它是 exit 1。
+> **特别声明：RK26 系列等部分固件目前暂时不可用。** 手上的 RK26 整机固件（`.RFW` 外壳）里，
+> `ROCK` 头不在文件 0 偏移，而是压在外层 RFW 头之后的 `0x200` 处；当前 `ROCK` 签名判定只认
+> 文件首 4 字节，所以直接喂进去一律「未命中 ROCK 目录表」，`rock` 子命令对它是 exit 1。
 > 这不是「数据坏了」，而是**入口还没支持嵌套偏移的头**，详见第 7 节第 1 条。
 >
 > 这份代码更像是一个还在长大的毛坯，欢迎大家多多完善、多提 Issue / PR，
@@ -57,7 +56,8 @@ sbrkcp/
 │   │                            BareScanner / ArchiveProbe / CryptoDiag
 │   ├── boot/    sbrkcp.boot    BootMain / Version / ModuleLoader / MainFrame / LogBus /
 │   │                            SelfTest / MiniJson
-│   │                            RockCli / StringsCli / StringsModule / StringsPanel（0.0.2）
+│   │                            RockCli / StringsCli / StringsModule / StringsPanel（0.0.2，
+│   │                            StringsModule 即 GUI「界面文案」内置入口，非独立模块 jar）
 │   └── modules/
 │       ├── fuckrkw/             .RKW 资源包解包
 │       ├── fuckrfw/             .RFW 整机固件解包
@@ -137,13 +137,13 @@ java -jar dist\boot.jar --version
 java -jar dist\boot.jar --list-modules
 
 :: 无头解包
-java -jar dist\boot.jar --headless --module fuckrkw --in samples\OPPOS9.RKW --out out\rkw
+java -jar dist\boot.jar --headless --module fuckrkw --in samples\样本B.RKW --out out\rkw
 
 :: 只列条目不落盘
-java -jar dist\boot.jar --headless --module fuckrkw --in samples\OPPOS9.RKW --out out\rkw --list
+java -jar dist\boot.jar --headless --module fuckrkw --in samples\样本B.RKW --out out\rkw --list
 
 :: 纵向翻转
-java -jar dist\boot.jar --headless --module fuckbmp0 --in samples\BMP0.BIN --out out\bmp0 --flip
+java -jar dist\boot.jar --headless --module fuckbmp0 --in samples\样本E.BIN --out out\bmp0 --flip
 
 :: 回归自检（退出码 0 通过 / 4 失败）
 java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
@@ -153,10 +153,10 @@ java -Dsbrkcp.base=dist -jar dist\boot.jar --selftest --samples samples
 
 ```bat
 :: 从资源包/固件里抠界面文案（S1–S10 全跑，默认输出 CSV）
-java -jar dist\boot.jar --headless strings samples\OPPOS9.RKW --out out\s_rkw
+java -jar dist\boot.jar --headless strings samples\样本B.RKW --out out\s_rkw
 
 :: 多格式同时导出 + 中英对照 + 去重 + 去尾空白
-java -jar dist\boot.jar --headless strings samples\OPPOS9.RKW --out out\s_rkw ^
+java -jar dist\boot.jar --headless strings samples\样本B.RKW --out out\s_rkw ^
      --format csv,txt,json,md --lang both --dedup --strip
 
 :: 只跑指定策略、提高最短长度、限制裸扫条数、静默
@@ -164,8 +164,8 @@ java -jar dist\boot.jar --headless strings D:\dump\files --out out\s_dir ^
      --strategies S1,S4 --min-len 6 --bare-limit 3000 --quiet
 
 :: 明确指定用哪个模块解外层容器（不指定则按 Engine.auto 自动识别）
-java -jar dist\boot.jar --headless --module fuckrkw strings samples\OPPOS9.RKW --out out\s_rkw
-java -jar dist\boot.jar --headless --module fuckrkimg strings samples\U6.BIN --out out\s_u6
+java -jar dist\boot.jar --headless --module fuckrkw strings samples\样本B.RKW --out out\s_rkw
+java -jar dist\boot.jar --headless --module fuckrkimg strings samples\样本C.BIN --out out\s_u6
 ```
 
 | 参数 | 默认 | 说明 |
@@ -213,11 +213,13 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
 
 | 样本 | 覆盖模块 | 说明 |
 |---|---|---|
-| `ROCK.RFW` | fuckrfw | 整机固件，裸图段启发式识别 |
-| `OPPOS9.RKW` | fuckrkw | 资源包，文件表 + 内嵌 RKRS |
-| `BMP0.BIN` | fuckbmp0 | RKRS 图片块，含 RLE 扩展 |
-| `U6.BIN` | fuckrkimg | 加密镜像，验证拒绝路径 |
-| `Image.code.bin` | fuckrkimg | 加密镜像，验证拒绝路径 |
+| 样本 A | fuckrfw | 整机固件（`.RFW` 外壳），裸图段启发式识别 |
+| 样本 B | fuckrkw | 资源包（`.RKW` 外壳），文件表 + 内嵌 RKRS |
+| 样本 C | fuckrkimg | 加密镜像，验证拒绝路径 |
+| 样本 D | fuckrkimg | 加密镜像，验证拒绝路径 |
+| 样本 E | fuckbmp0 | 图片归档 `BMP0.BIN`，RKRS 图片块，含 RLE 扩展 |
+
+> **代号约定**：为免暴露厂商与设备来源，文档正文、实测表、回归基线与命令行示例统一用代号指代样本。回归自检实际按固定文件名读取 `samples/` 下的文件（见 `src/boot/sbrkcp/boot/SelfTest.java` 与 `baseline/baseline.json` 的 key，均不入库），两者一一对应；跑示例时把代号换成你本地的实际文件名即可，或按代号重命名样本。样本 E 指图片归档 `BMP0.BIN` 这一类，其内部两批数据另记作 **E-1**（8 字节块头，1270 条）与 **E-2**（14 字节块头，2624 条）。
 
 样本缺失时 `--selftest` 会输出 `PASS 1 / FAIL 5` 并以退出码 4 结束，这是缺少样本的
 预期行为，不用惊慌喵，不是构建失败；构建本身的判定看 `[5/5]` 的 `已加载 4 / 失败 0`。
@@ -273,8 +275,8 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
 ### 5.2 BMP0.BIN 图片块
 
 - 块头有 **两种**，必须自适应，写死任一种都会整体错位：
-  - **8 字节**（旧固件，样本 A 的 1270 条全部如此）：`width(u16) height(u16) depth(u16) comp(u16)`；
-  - **14 字节**（RK28 SDK V1.2，样本 B 的 2624 条全部如此）：前 4 字段同上，`+8` 起再放
+  - **8 字节**（旧固件，样本 E-1 的 1270 条全部如此）：`width(u16) height(u16) depth(u16) comp(u16)`；
+  - **14 字节**（RK28 SDK V1.2，样本 E-2 的 2624 条全部如此）：前 4 字段同上，`+8` 起再放
     `u16 mode` + `FF FF FF` + `CD CD CD CD CD CD`（mode 对 comp=5 无意义，仅作对齐/标记）。
   - RAW 类（comp 0/5）可由 `length - w*h*bpp` 唯一反推：恰等 8 或 14 直接采用；落在
     `(8,14]` 视为 8 字节头 + `0~6` 字节尾部残留；大于 14 视为 14 字节头 + 尾部残留。
@@ -296,9 +298,9 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
   判定必须**逐像素、按 4 字节边界**做；用跨像素的字节模式扫描（如正则 `FF 00 FF ?`）
   会把上一像素的 `A` 与下一像素的 `B/G` 凑成假品红，连带污染第三个通道。
 
-> 上述语义为两批真机样本全量对拍结论：样本 A（1270 条 / 8 字节头 / comp 0:1063、1:207）
-> 与样本 B（2624 条 / 14 字节头 / comp 0:842、1:402、5:1380）均与独立参考解码器逐条像素
-> MD5 **零差异**，样本 B 的 8 个金标准 MD5 探针全部命中。仍缺第三方资料佐证；
+> 上述语义为两批真机样本全量对拍结论：样本 E-1（1270 条 / 8 字节头 / comp 0:1063、1:207）
+> 与样本 E-2（2624 条 / 14 字节头 / comp 0:842、1:402、5:1380）均与独立参考解码器逐条像素
+> MD5 **零差异**，样本 E-2 的 8 个金标准 MD5 探针全部命中。仍缺第三方资料佐证；
 > 遇到异常图块时优先怀疑此处。
 
 ### 5.3 .RKW 资源包
@@ -321,11 +323,11 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
     （`part2`/`part3` 的前 31 张），其余资源取值为 `w`、`h` 或随机值。因此 **`f3==0x18` 只作可信度诊断，
     不作硬过滤**，否则会连带丢掉非 0x18 族的真实资源。
 
-  样本 `ROCK.RFW` 据此得 4 分区 118 张，分区分布 `[6, 6, 53, 53]`。
+  样本 A 据此得 4 分区 118 张，分区分布 `[6, 6, 53, 53]`。
 - **可信段诊断**：`unpack_report.txt` 会逐段给出 `f3` 值与取值种类数，并汇总
   `裸图段 N 段 / M 张（可信段 a 段 / b 张）`；`f3` 整段同族且等于 `0x0018` 的段记为“可信”，
   其余标为“疑似伪段”并仍照常导出（不删数据，留待人工复核）。
-  `ROCK.RFW` 实测：`part2`、`part3` 各 10 段 53 张，可信段均为 3 段 31 张；
+  样本 A 实测：`part2`、`part3` 各 10 段 53 张，可信段均为 3 段 31 张；
   `part0`、`part1` 各 6 张**全部落在疑似伪段**（图像判读为噪声，非 UI）。
 - 交叉校验：`part2` 与 `part3` 内容互为镜像，`--selftest` 会比对两者导出的尺寸序列，
   要求同位置一致率 ≥90%（实测 94%）。**可信段部分两者 31/31 完全一致，连 PNG 字节数都相同**；
@@ -380,7 +382,7 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
 
 十条策略（`--strategies` 的取值就是这几个编号）：
 
-| 策略 | 做什么 | 实测（`OPPOS9.RKW`，23 MB） | 实测（`U6.BIN`，8 MB） |
+| 策略 | 做什么 | 实测（样本 B，23 MB） | 实测（样本 C，8 MB） |
 |---|---|---|---|
 | S1 | RKRS 字符串表解析 | hit 702 条，基址 `0x1315014`，score 2369.25 | miss（无自洽 RKRS 字段表） |
 | S2 | 基址 / 偏移对齐枚举 | 候选 41 个，有效 1 个 | 候选 1 个，有效 0 |
@@ -393,7 +395,7 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
 | S9 | 加密 / 压缩诊断 | 熵 6.56 bit/B，判「非加密特征」 | 熵 6.80 bit/B，判「非加密特征」 |
 | S10 | 归一化去重 | 15440 → 15440（默认不去重） | 14650 → 14650 |
 
-合计：`OPPOS9.RKW` 结构化 702 + 裸扫 14738 = 15440 条；`U6.BIN` 结构化 0 + 裸扫 14650 条。
+合计：样本 B 结构化 702 + 裸扫 14738 = 15440 条；样本 C 结构化 0 + 裸扫 14650 条。
 
 要点与坑：
 
@@ -404,9 +406,9 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
   「达到条数上限（5000），后续被截断」。看到 5000 就该知道**不是全部**，用 `--bare-limit`
   或 `--min-len` 收窄再来一遍。
 - **S9 只做诊断，不产文案**，而且它的判定口径与 `fuckrkimg` 的加密判定**不是同一套阈值**：
-  `U6.BIN` 在 `--selftest` 里是 `ENCRYPTED`，但 S9 会给「非加密特征」（熵 6.80）。
+  样本 C 在 `--selftest` 里是 `ENCRYPTED`，但 S9 会给「非加密特征」（熵 6.80）。
   两个结论不要互相引用，加密与否以 `fuckrkimg` 的解包判定为准。
-- **裸扫条数与质量无关**：U6 这种打不开的镜像照样能扫出 14650 条「候选」，绝大多数是
+- **裸扫条数与质量无关**：样本 C 这种打不开的镜像照样能扫出 14650 条「候选」，绝大多数是
   加密数据里凑巧连续的可见字节。不要拿条数当成果。
 - 导出：CSV / TXT / JSON / MD 一律 UTF-8，CSV 额外写 BOM；`probe_report.txt` 记录每个策略的
   `status / hits / 耗时 / 说明` 与全部告警，排查先看它。
@@ -429,9 +431,9 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
 
 | 输入 | 结果 |
 |---|---|
-| `OPPOS9.RKW`（RK28，`KRDL` 外壳） | **未命中**，exit 1，`notes` 为空列表 |
-| `ROCK.RFW`（RK26，`WFKR` 外壳） | **未命中**，exit 1，`notes` 为空列表 |
-| `ROCK.RFW` 手工切掉外层 `0x200` 头后的 `ROCK.RFW[0x200:]` | 命中：表起点 `0x20`、条目 67、字库 2（16×16、16×24）、像素 0、索引 1、明文 26815、用时 3457 ms |
+| 样本 B（RK28，`KRDL` 外壳） | **未命中**，exit 1，`notes` 为空列表 |
+| 样本 A（RK26，`WFKR` 外壳） | **未命中**，exit 1，`notes` 为空列表 |
+| 样本 A 手工切掉外层 `0x200` 头后的 `样本 A[0x200:]` | 命中：表起点 `0x20`、条目 67、字库 2（16×16、16×24）、像素 0、索引 1、明文 26815、用时 3457 ms |
 
 所以结论很直白：**当前 `rock` 只认「文件偏移 0 就是 `ROCK`」的裸容器**。带外层壳
 （`.RFW` / `.RKW`）的固件，必须先自己解出内层文件再喂进来；RK26 就是卡在这一步（§7 第 1 条）。
@@ -453,11 +455,11 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
 
 | 样本 | MD5 | 模块 | 期望 |
 |------|-----|------|------|
-| `ROCK.RFW` | `422f197b5e52085250ee7ad4e11abd56` | fuckrfw | PNG 118，分区 `[6, 6, 53, 53]`，part2/part3 镜像 ≥90% |
-| `OPPOS9.RKW` | `2b49dedd47aabc41d03ab1073122dde7` | fuckrkw | 文件 29，PNG 0，`files/` 指纹固定；二阶段 `files/RESOURCE/BID/BMP0.BIN` 参照 618 张 |
-| `BMP0.BIN` | `e6ee01f2482fd19718b85be36ec7359b` | fuckbmp0 | PNG 1270 |
-| `U6.BIN` | `92dee7a1fbd7ac65e3b612b383044678` | fuckrkimg | 加密，PNG 0 |
-| `Image.code.bin` | `b6a3fa75a001e678a9db813560a99616` | fuckrkimg | 加密，PNG 0 |
+| 样本 A | `422f197b5e52085250ee7ad4e11abd56` | fuckrfw | PNG 118，分区 `[6, 6, 53, 53]`，part2/part3 镜像 ≥90% |
+| 样本 B | `2b49dedd47aabc41d03ab1073122dde7` | fuckrkw | 文件 29，PNG 0，`files/` 指纹固定；二阶段 `files/RESOURCE/BID/BMP0.BIN` 参照 618 张 |
+| 样本 C | `92dee7a1fbd7ac65e3b612b383044678` | fuckrkimg | 加密，PNG 0 |
+| 样本 D | `b6a3fa75a001e678a9db813560a99616` | fuckrkimg | 加密，PNG 0 |
+| 样本 E | `e6ee01f2482fd19718b85be36ec7359b` | fuckbmp0 | PNG 1270 |
 
 本地验证：`--selftest` → `PASS 6 / FAIL 0`，退出码 0（第 6 项为 `BigFile` 读满校验）。
 这一行全部通过的时候，猫娘是真的很开心喵～
@@ -465,7 +467,7 @@ java -jar dist\boot.jar --headless rock D:\inner --out out\rock --quiet
 换固件后可先用参考解码器对拍，确认是解码缺陷还是新格式：
 
 ```bat
-python tools\bmp0_ref.py samples\BMP0.BIN --out temp\ref.txt
+python tools\bmp0_ref.py samples\样本E.BIN --out temp\ref.txt
 python tools\bmp0_ref.py G:\RESOURCE\BID\BMP0.BIN --verify temp\java.txt
 
 :: FAT 镜像：先用 GUI 勾选「导出清单」，再拿清单对拍
@@ -479,15 +481,15 @@ python tools\fat_ref.py "<镜像>" --verify "<解包目录>\dump_manifest.csv"
 
 以下是猫娘目前还没搞定、或者不敢打包票的地方喵，动手前请先看一遍：
 
-1. **RK26 系列等部分固件暂时不可用**：`ROCK.RFW`（`RK2602A_SDK_MLC_DRM_APE.rfw`）这类
-   RK26 固件，`ROCK` 头实际压在外层 `WFKR` 头之后的 `0x200` 处，而签名判定只认文件首 4 字节，
+1. **RK26 系列等部分固件暂时不可用**：手上的 RK26 整机固件（`.RFW` 外壳）里，`ROCK` 头并不在
+   文件 0 偏移，而是压在外层 `WFKR` 头之后的 `0x200` 处；而签名判定只认文件首 4 字节，
    于是直接判「未命中 ROCK 目录表」，`--headless rock` 以 exit 1 结束，`notes` 还是空的
-   （只告诉你未命中，不告诉你为什么）。**这不是格式不认识**：把 `ROCK.RFW` 从 `0x200` 切出来
-   （`ROCK.RFW[0x200:]`）再喂进去，同一份代码能解出 67 条目录、2 个字库（16×16 / 16×24）、
+   （只告诉你未命中，不告诉你为什么）。**这不是格式不认识**：把该文件从 `0x200` 切出来、
+   丢掉外层头再喂进去，同一份代码能解出 67 条目录、2 个字库（16×16 / 16×24）、
    1 个索引表、26815 条明文，用时 3.5 s（见 §5.7）。所以卡的是**入口不支持嵌套偏移的头**，
    不是解析内核。在补上「自动找 `ROCK` 头偏移」之前，RK26 系列请先手工切头、或先解掉外层壳
-   再喂；直接丢整包进去一律不可用。`OPPOS9.RKW`（RK28）同理，它根本没有顶层 `ROCK` 表。
-2. **不支持加密镜像**：`U6.BIN`、`Image.code.bin` 这类镜像仅识别为 `ENCRYPTED` 并退出，
+   再喂；直接丢整包进去一律不可用。RK28 的 `.RKW` 资源包同理，它根本没有顶层 `ROCK` 表。
+2. **不支持加密镜像**：样本 C、样本 D 这类镜像仅识别为 `ENCRYPTED` 并退出，
    不做解密。判定依据为熵值、零字节比、可打印率与游程密度的组合，属于启发式，可能误判。
 3. **裸图段识别是启发式**：`0x200` 记录头没有魔数，判据由阈值决定，张数会随实现细节漂移
    （曾出现 118~183 张的不同结果）。当前判据见 §5.4，并辅以 part2/part3 镜像一致率门禁；
@@ -502,7 +504,7 @@ python tools\fat_ref.py "<镜像>" --verify "<解包目录>\dump_manifest.csv"
    探测**（镜像须是分区起始处的裸 FAT 卷）、不恢复已删除项、不处理跨盘 .img 内的多分区，
    这些属 L2，未实现。
 6. **BMP0 语义为实测推断**：`count` 的无符号游程、`0xFF` + 小端 u32 扩展计数、`0x00` 终结符、
-   8/14 字节双头自适应与洋红色键规则均来自实测（样本 A 1270 条 + 样本 B 2624 条全量与独立
+   8/14 字节双头自适应与洋红色键规则均来自实测（样本 E-1 1270 条 + 样本 E-2 2624 条全量与独立
    参考解码器像素 MD5 一致），尚缺第三方资料佐证；换固件后若出现整批花屏，先查 §5.2 的块头判据。
 7. **覆盖范围有限**：RK26 部分容器（切头后可解，见第 1 条）+ RK27 / RK28 早期方案做过实测，
    不保证兼容后续 RK29+ 的资源格式；RK26 的整包入口尚未打通。
@@ -510,16 +512,16 @@ python tools\fat_ref.py "<镜像>" --verify "<解包目录>\dump_manifest.csv"
    把未压缩块的第 4 字节填充位当 alpha、把块头写死 8 字节、色键按跨像素字节模式匹配，
    导致含扩展游程的图块整幅错位、未压缩图块全透明、14 字节头样本整体错位、部分图块通道被清零。
    现按 §5.2 的实测语义解码，两批真机样本全量对拍均通过：
-   - 样本 A（1270 条 / 8 字节头）：逐条像素 MD5 与参考解码器完全一致，抽样 10 条 PNG 逐像素无差异
+   - 样本 E-1（1270 条 / 8 字节头）：逐条像素 MD5 与参考解码器完全一致，抽样 10 条 PNG 逐像素无差异
      （透明像素为 `(255,0,255,0)`），指纹门禁更新为 `3228c404…`；
-   - 样本 B（2624 条 / 14 字节头 / comp 5:1380）：逐条像素 MD5 零差异，8 个金标准 MD5 全部命中，
+   - 样本 E-2（2624 条 / 14 字节头 / comp 5:1380）：逐条像素 MD5 零差异，8 个金标准 MD5 全部命中，
      导出 2624 张 PNG。
 
    二阶段（`files/RESOURCE/BID/BMP0.BIN`）张数 618 仍只作参照告警——该内嵌样本尚未做逐条对拍。
 9. **字符串抽取的边界**（0.0.2 新增，先说清再看数）：
    - S10 去重**默认关闭**，同一句文案在不同界面出现会重复列出；加了 `--dedup` 才合并。
    - S4/S5/S7 各自 5000 条硬上限，达到即截断，报告里有告警——**条数不是成果**。
-   - S9 的「非加密特征」与 `fuckrkimg` 的 `ENCRYPTED` **不是同一套阈值**：`U6.BIN` 两边结论相反
+   - S9 的「非加密特征」与 `fuckrkimg` 的 `ENCRYPTED` **不是同一套阈值**：样本 C 两边结论相反
      （S9 熵 6.80 判非加密，`fuckrkimg` 判加密）。加密与否以 `fuckrkimg` 为准，S9 只作参考。
    - 对加密镜像，工具只能给「疑似 / 非加密」的判定，**抽不出可用文案**，扫出来的候选基本是噪声。
    - S8 只认得 JDK 自带的解压能力，**LZMA 没有 JDK 实现**，所以 `S8=miss` 属预期，不是漏扫。
@@ -570,7 +572,7 @@ pack_exe.bat samples    :: 同上，并把 samples\ 一并塞进包里（体积�
 
 验证口径（在剥离 `PATH` / `JAVA_HOME` 中所有 Java 项的环境下实测）：
 `--list-modules` 4 加载 / 0 失败；`--selftest` PASS 6 / FAIL 0；
-`--headless --module fuckbmp0 --in samples\BMP0.BIN` 输出 1270 张 PNG；`--smoke` 窗口可见、无残留非守护线程。
+`--headless --module fuckbmp0 --in samples\样本E.BIN` 输出 1270 张 PNG；`--smoke` 窗口可见、无残留非守护线程。
 
 ---
 
