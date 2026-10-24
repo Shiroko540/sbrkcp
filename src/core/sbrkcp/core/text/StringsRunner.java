@@ -1,4 +1,4 @@
-package sbrkcp.boot;
+package sbrkcp.core.text;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -6,15 +6,12 @@ import java.util.List;
 import sbrkcp.api.ProgressListener;
 import sbrkcp.api.UnpackOptions;
 import sbrkcp.core.Engine;
-import sbrkcp.core.text.StringsEntry;
-import sbrkcp.core.text.StringsExport;
-import sbrkcp.core.text.StringsProbe;
 
 /**
  * 界面文案提取：CLI 与 GUI 共用的唯一入口（同一实现，保证输出一致）。
  * 任意路径一律尝试；未命中结构化表时按模块解包再递归，最后才报"未提取到文案"。
  */
-public final class StringsCli {
+public final class StringsRunner {
 
     /** 日志出口：CLI 打到 stdout，GUI 打到面板。 */
     public interface Log {
@@ -46,7 +43,7 @@ public final class StringsCli {
         }
     }
 
-    private StringsCli() {
+    private StringsRunner() {
     }
 
     // ---------- 探测 ----------

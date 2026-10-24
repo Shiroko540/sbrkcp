@@ -60,11 +60,13 @@ call :build_module fuckrkimg "%ROOT%\dist\main\fuckrkimg.jar"
 if errorlevel 1 goto :fail
 call :build_module fuckbmp0  "%ROOT%\dist\other\fuckbmp0.jar"
 if errorlevel 1 goto :fail
+call :build_module strings  "%ROOT%\dist\other\strings.jar"
+if errorlevel 1 goto :fail
 
 echo [4/5] check artifacts
 if not exist "%ROOT%\dist\main\fuckit\rockchip" mkdir "%ROOT%\dist\main\fuckit\rockchip"
 if not exist "%ROOT%\dist\main\fuckit\rockchip\.gitkeep" type nul > "%ROOT%\dist\main\fuckit\rockchip\.gitkeep"
-for %%f in ("%ROOT%\dist\boot.jar" "%ROOT%\dist\main\fuckrkw.jar" "%ROOT%\dist\main\fuckrfw.jar" "%ROOT%\dist\main\fuckrkimg.jar" "%ROOT%\dist\other\fuckbmp0.jar") do (
+for %%f in ("%ROOT%\dist\boot.jar" "%ROOT%\dist\main\fuckrkw.jar" "%ROOT%\dist\main\fuckrfw.jar" "%ROOT%\dist\main\fuckrkimg.jar" "%ROOT%\dist\other\fuckbmp0.jar" "%ROOT%\dist\other\strings.jar") do (
   for %%s in (%%f) do echo     %%~nxs  %%~zs bytes
 )
 
@@ -109,6 +111,7 @@ del /q "%ROOT%\dist\main\fuckrkw.jar"   2>nul
 del /q "%ROOT%\dist\main\fuckrfw.jar"   2>nul
 del /q "%ROOT%\dist\main\fuckrkimg.jar" 2>nul
 del /q "%ROOT%\dist\other\fuckbmp0.jar" 2>nul
+del /q "%ROOT%\dist\other\strings.jar"  2>nul
 echo done
 exit /b 0
 

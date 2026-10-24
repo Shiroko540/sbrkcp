@@ -19,7 +19,7 @@
    sbrkcp-cli.exe --headless rock <文件> --out <目录> [--quiet]
    sbrkcp-cli.exe --smoke [--in <固件>]              GUI 冒烟测试
 
-   模块 id：fuckrkw / fuckrfw / fuckrkimg / fuckbmp0
+   模块 id：fuckrkw / fuckrfw / fuckrkimg / fuckbmp0 / strings
 
 【目录结构】
 
@@ -28,6 +28,7 @@
    app\boot.jar          主程序
    main\*.jar            主分类模块（fuckrkw / fuckrfw / fuckrkimg）
    other\fuckbmp0.jar    BMP0 模块
+   other\strings.jar     界面文案抽取模块
    runtime\              内置 Java 运行时（勿删）
    samples\              样本目录：本包未附带样本，自检前请放入
                          样本 A / 样本 B / 样本 C / 样本 D / 样本 E
@@ -48,6 +49,6 @@
    · **RK26 系列等部分固件暂时不可用**：这类固件的 ROCK 头压在外层 WFKR 头之后（实测位于
      偏移 0x200），而签名判定只认文件首 4 字节，--headless rock 会直接报「未命中 ROCK 目录表」
      并以 exit 1 退出。需先自行切掉外层头（或解掉外层壳）再分析，详见发布页 README 第 7 节第 1 条。
-   · 「界面文案」是主程序内置的模块入口，不是 main\ / other\ 下的 jar，也不会出现在
-     --list-modules 里；ROCK 表分析目前只有命令行，没有图形界面。
+   · 「界面文案」是 other\ 下的独立模块 jar（strings.jar），会出现在 --list-modules 里；
+     ROCK 表分析目前只有命令行，没有图形界面。
    · strings 的 S4/S5/S7 各有 5000 条上限，达到即截断；加密镜像只能给判定，抽不出文案。

@@ -55,12 +55,6 @@ public final class MainFrame extends JFrame {
         this.entries = new ArrayList<>(entries);
         this.baseDir = baseDir;
         this.bus = bus;
-        // 内置「界面文案」入口：与 dist/main、dist/other 的模块并列显示，不需要单独 jar
-        ModuleLoader.Entry builtin = new ModuleLoader.Entry(new File("builtin-strings"));
-        builtin.module = new StringsModule();
-        builtin.id = builtin.module.info().id;
-        builtin.name = builtin.module.info().name;
-        this.entries.add(builtin);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1100, 720);
         setMinimumSize(new Dimension(900, 560));

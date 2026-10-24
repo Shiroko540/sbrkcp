@@ -1,4 +1,4 @@
-package sbrkcp.boot;
+package sbrkcp.modules.strings;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -28,11 +28,12 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import sbrkcp.api.ModuleContext;
 import sbrkcp.core.text.StringsEntry;
+import sbrkcp.core.text.StringsRunner;
 import sbrkcp.core.text.StringsProbe;
 
 /**
  * 「界面文案」面板：源文件 + 探测摘要 + 策略台账 + 文案表（结构化/裸扫分栏）+ 搜索 + 导出。
- * 提取与导出全部走 StringsCli，与 CLI 同一实现。
+ * 提取与导出全部走 StringsRunner，与 CLI 同一实现。
  */
 public final class StringsPanel extends JPanel {
 
@@ -217,7 +218,7 @@ public final class StringsPanel extends JPanel {
         bar.setString("提取中…");
         summary.setText("提取中：" + in.getAbsolutePath());
 
-        final StringsCli.Options o = new StringsCli.Options();
+        final StringsRunner.Options o = new StringsRunner.Options();
         o.input = in;
         o.outDir = outDir;
         o.formats = String.valueOf(formatBox.getSelectedItem());
@@ -226,7 +227,7 @@ public final class StringsPanel extends JPanel {
         Thread t = new Thread(() -> {
             StringsProbe.Report r;
             try {
-                r = StringsCli.probe(o, s -> SwingUtilities.invokeLater(() -> log(s)));
+                r = StringsRunner.probe(o, s -> SwingUtilities.invokeLater(() -> log(s)));
             } catch (Throwable ex) {
                 SwingUtilities.invokeLater(() -> {
                     log("提取失败：" + ex);
@@ -319,13 +320,13 @@ public final class StringsPanel extends JPanel {
             log("还没有可导出的结果");
             return;
         }
-        final StringsCli.Options o = new StringsCli.Options();
+        final StringsRunner.Options o = new StringsRunner.Options();
         o.input = new File(inField.getText().trim());
         o.outDir = new File(outField.getText().trim());
         o.formats = String.valueOf(formatBox.getSelectedItem());
         o.lang = String.valueOf(langBox.getSelectedItem());
         try {
-            List<File> files = StringsCli.export(last, o, s -> SwingUtilities.invokeLater(() -> log(s)));
+            List<File> files = StringsRunner.export(last, o, s -> SwingUtilities.invokeLater(() -> log(s)));
             for (File f : files) log("产出：" + f.getAbsolutePath());
             summary.setText("已导出 " + files.size() + " 个文件到 " + o.outDir.getAbsolutePath());
         } catch (Throwable t) {

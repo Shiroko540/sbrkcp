@@ -24,7 +24,7 @@ clean() {
   echo "清理 build/ 与 dist/*.jar"
   rm -rf build/bootjar build/mods
   rm -f dist/boot.jar dist/main/fuckrkw.jar dist/main/fuckrfw.jar \
-        dist/main/fuckrkimg.jar dist/other/fuckbmp0.jar
+        dist/main/fuckrkimg.jar dist/other/fuckbmp0.jar dist/other/strings.jar
 }
 
 if [ "$1" = "clean" ]; then
@@ -67,6 +67,7 @@ build_module fuckrkw   dist/main/fuckrkw.jar
 build_module fuckrfw   dist/main/fuckrfw.jar
 build_module fuckrkimg dist/main/fuckrkimg.jar
 build_module fuckbmp0  dist/other/fuckbmp0.jar
+build_module strings  dist/other/strings.jar
 
 echo "[4/5] 校验产物"
 mkdir -p dist/main/fuckit/rockchip

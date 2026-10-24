@@ -7,6 +7,7 @@ import sbrkcp.api.ProgressListener;
 import sbrkcp.api.SbrkcpModule;
 import sbrkcp.api.UnpackOptions;
 import sbrkcp.api.UnpackResult;
+import sbrkcp.core.text.StringsRunner;
 
 /** 唯一入口。无参 → GUI；带参 → headless CLI。 */
 public final class BootMain {
@@ -168,7 +169,7 @@ public final class BootMain {
         }
         if (stringsMode) {
             List<ModuleLoader.Entry> all = ModuleLoader.load(baseDir);
-            StringsCli.Options so = new StringsCli.Options();
+            StringsRunner.Options so = new StringsRunner.Options();
             so.input = stringsIn == null ? null : new File(stringsIn);
             so.outDir = output == null ? null : new File(output);
             so.module = moduleId == null ? "" : moduleId;
@@ -190,7 +191,7 @@ public final class BootMain {
             so.minLen = minLen;
             so.bareLimit = bareLimit;
             so.quiet = quiet;
-            int code = StringsCli.run(so, new StringsCli.Log() {
+            int code = StringsRunner.run(so, new StringsRunner.Log() {
                 @Override
                 public void line(String s) {
                     System.out.println(s);

@@ -13,7 +13,7 @@
 
 0.0.2 起除了解包，还多了两件「先看清再动手」的事：
 
-- **字符串抽取**（`--headless strings` / GUI 内置「界面文案」）：按 10 条策略从固件或目录里
+- **字符串抽取**（`--headless strings` / GUI「界面文案」模块）：按 10 条策略从固件或目录里
   捞结构化文案与裸扫候选，可导出 CSV / TXT / JSON / Markdown；
 - **ROCK 表分析**（`--headless rock`）：解析 `ROCK` 头 + 16 字节目录表容器，产出条目表、
   分区地图、块分类、文本与字库/像素 PNG（CLI 专属，暂无 GUI 入口）。
@@ -54,15 +54,15 @@ sbrkcp/
 │   │   └── text/               字符串抽取内核（0.0.2）
 │   │                            StringsProbe / StringTable / StringsExport / StringsEntry /
 │   │                            BareScanner / ArchiveProbe / CryptoDiag
+│   │                            StringsRunner（CLI 与 GUI 共用的执行入口）
 │   ├── boot/    sbrkcp.boot    BootMain / Version / ModuleLoader / MainFrame / LogBus /
-│   │                            SelfTest / MiniJson
-│   │                            RockCli / StringsCli / StringsModule / StringsPanel（0.0.2，
-│   │                            StringsModule 即 GUI「界面文案」内置入口，非独立模块 jar）
+│   │                            SelfTest / MiniJson / RockCli
 │   └── modules/
 │       ├── fuckrkw/             .RKW 资源包解包
 │       ├── fuckrfw/             .RFW 整机固件解包
 │       ├── fuckrkimg/           FAT 镜像整盘解包（L1） / 未知·加密镜像识别
-│       └── fuckbmp0/            BMP0.BIN 图片归档解包
+│       ├── fuckbmp0/            BMP0.BIN 图片归档解包
+│       └── strings/             界面文案抽取（GUI 面板，执行逻辑复用 core.text）
 ├── dist/
 │   ├── boot.jar                主程序（含 api + core）
 │   ├── main/
@@ -71,7 +71,8 @@ sbrkcp/
 │   │   ├── fuckrkimg.jar
 │   │   └── fuckit/rockchip/    预留目录（按芯片族归档的扩展位）
 │   └── other/
-│       └── fuckbmp0.jar        BMP0 属于子资源，归入 other
+│       ├── fuckbmp0.jar        BMP0 属于子资源，归入 other
+│       └── strings.jar         界面文案抽取，不绑定具体固件格式，归入 other
 └── out/                        解包产物落盘位置（手工指定）
 ```
 
@@ -98,7 +99,7 @@ build.bat clean
 ./build.sh clean
 ```
 
-产物：`dist/boot.jar`、`dist/main/*.jar`、`dist/other/fuckbmp0.jar`。
+产物：`dist/boot.jar`、`dist/main/*.jar`、`dist/other/fuckbmp0.jar`、`dist/other/strings.jar`。
 
 > 注意喵：模块编译必须带 `--release 8`（或 `-source 8 -target 8`），否则 JDK 21 会产出
 > class 版本 65，在 Java 8 运行时抛 `UnsupportedClassVersionError`，表现为“模块全部加载失败”。
@@ -116,12 +117,13 @@ java -jar dist\boot.jar
 左侧模块列表，右侧为该模块的参数面板；选择输入文件与输出目录后点“开始解包”，
 日志实时输出，随时可以中断喵。
 
-模块列表里除了 `dist/main`、`dist/other` 的 jar 模块，0.0.2 起还**内置**了一个
-「界面文案」入口（id `strings`，归在“其他功能”下）：
+模块列表里除了 `dist/main`、`dist/other` 的 jar 模块，0.0.2 起还多了一个
+「界面文案」模块（id `strings`，归在“其他功能”下，落在 `dist/other/strings.jar`）：
 
-- 它**不是**独立模块 jar，由 `boot.jar` 里的 `StringsModule` 直接注册，与 jar 模块并列显示；
-- 因此它**不会**出现在 `--list-modules` 里（那边只列 `main/`、`other/` 下真实加载到的 jar），
-  也不受模块加载失败影响；
+- 它和 `fuckbmp0` 一样是普通模块 jar，由 `boot.jar` 的模块加载器按
+  `META-INF/services/sbrkcp.api.SbrkcpModule` 加载，因此会出现在 `--list-modules` 里；
+- jar 内只有模块实现与面板，字符串抽取内核仍在 `core.text`（`StringsProbe` /
+  `StringsRunner` 等），GUI 与 CLI 走同一套执行逻辑；
 - 面板提供「结构化 / 裸扫 / 全部合并」三个视图与「合并去重」按钮，输入可以是单个固件，
   也可以是一个目录。
 

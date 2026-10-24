@@ -14,17 +14,18 @@
   / `BareScanner` / `ArchiveProbe` / `CryptoDiag`，支持裸扫描、归档探测与加密判定。
 - **ROCK 表分析**：`core/rock` 新增 `RockAnalyzer` / `RockTable` / `RockReport` / `RockStats`，
   输出索引命中、字模命中、文本命中与像素命中统计。
-- **CLI 入口**：`RockCli`、`StringsCli`，可在命令行直接调用上述能力。
-- **GUI**：新增 `StringsModule` / `StringsPanel`（字符串抽取模块），并调整主界面文案。
-- **版本标识**：统一为 `0.0.2`，4 个模块的 `ModuleInfo.version` 同步。
+- **CLI 入口**：`RockCli` 与 `core.text.StringsRunner`（`--headless strings`），可在命令行直接调用上述能力。
+- **GUI**：新增「界面文案」模块 `dist/other/strings.jar`（`StringsModule` / `StringsPanel`），并调整主界面文案。
+- **版本标识**：统一为 `0.0.2`，5 个模块的 `ModuleInfo.version` 同步。
 
 ### 变更
 
 - `--headless` 新增 `strings` 与 `rock` 两个子命令；`strings` 支持
   `--format`（csv/txt/json/md，可逗号多选）/ `--lang` / `--strategies` / `--min-len` /
   `--bare-limit` / `--dedup` / `--no-dedup` / `--strip` / `--quiet`。
-- 「界面文案」为 boot 内置模块（`StringsModule`，id `strings`），与 `dist/main`、`dist/other`
-  的 jar 模块并列显示，但**不是独立 jar**，也**不会**出现在 `--list-modules` 输出里。
+- 「界面文案」从 boot 内置入口改为**独立模块 jar**（`dist/other/strings.jar`，id `strings`）：
+  面板与 `createPanel` 移入 `sbrkcp.modules.strings`，抽取执行逻辑下沉到 `core.text.StringsRunner`，
+  `boot` 不再持有任何字符串 UI 类；模块随其余 jar 一起被 `--list-modules` 列出。
 
 ### 已知问题
 

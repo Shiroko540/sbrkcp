@@ -1,4 +1,4 @@
-package sbrkcp.boot;
+package sbrkcp.modules.strings;
 
 import java.io.File;
 import java.util.List;
@@ -9,17 +9,17 @@ import sbrkcp.api.ProgressListener;
 import sbrkcp.api.SbrkcpModule;
 import sbrkcp.api.UnpackOptions;
 import sbrkcp.api.UnpackResult;
-import sbrkcp.core.text.StringsExport;
 import sbrkcp.core.text.StringsProbe;
+import sbrkcp.core.text.StringsRunner;
 
 /**
- * 内置模块：把「界面文案」挂进主窗口现有的模块区（dist/other 同级入口），
- * 不单独打 jar，避免与 core 里已有的 text 包重复。
+ * 界面文案模块（dist/other/strings.jar）：从任意固件/容器/目录里提取界面文案。
+ * 提取与导出逻辑全部走 core 的 {@link StringsRunner}，与 CLI 同一实现。
  */
 public final class StringsModule implements SbrkcpModule {
 
     private static final ModuleInfo INFO = new ModuleInfo(
-            "strings", "界面文案", "1.0", ModuleLoader.API_VERSION,
+            "strings", "界面文案", "0.0.2", 1,
             "其他功能", new String[0], 90,
             "从任意固件/容器/目录里提取界面文案（中英对照），S1–S10 全跑");
 
@@ -36,18 +36,18 @@ public final class StringsModule implements SbrkcpModule {
         r.input = input;
         r.outDir = outDir;
         r.kind = "STRINGS";
-        StringsCli.Options o = StringsCli.Options.of(input);
+        StringsRunner.Options o = StringsRunner.Options.of(input);
         o.outDir = outDir;
         if (progress != null) o.quiet = false;
-        StringsCli.Log log = progress == null ? null : new StringsCli.Log() {
+        StringsRunner.Log log = progress == null ? null : new StringsRunner.Log() {
             @Override
             public void line(String s) {
                 progress.log(s);
             }
         };
-        StringsProbe.Report rep = StringsCli.probe(o, log);
+        StringsProbe.Report rep = StringsRunner.probe(o, log);
         try {
-            List<File> files = StringsCli.export(rep, o, log);
+            List<File> files = StringsRunner.export(rep, o, log);
             r.fileCount = files.size();
             for (File f : files) r.note("产出：" + f.getName());
         } catch (Throwable t) {
